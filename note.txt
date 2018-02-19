@@ -1,0 +1,4 @@
+ffmpeg -f s16le -ar 44100 -ac 1 -i 2018-02-19-10.pcm -acodec libmp3lame 2018-02-19-10.pcm.mp3
+ffmpeg -f s16le -ar 44100 -ac 1 -i 2018-02-19-11.pcm -acodec libmp3lame 2018-02-19-11.pcm.mp3
+
+play -t raw -r 44100 -e signed-integer -b 16 -c 1 --endian little 2018-02-19-15.pcm
