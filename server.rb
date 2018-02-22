@@ -9,6 +9,8 @@ module Anubarak
   class Save
     def initialize
       @queue = Queue.new
+      @subscribers = []
+      @output_queue = Queue.new
     end
 
     def timestamp
@@ -33,6 +35,40 @@ module Anubarak
               file.write data
             end
           end
+
+          puts batch.length
+          @output_queue << batch
+        end
+      end
+
+      output_thread = Thread.new do
+        loop do
+          batch = @output_queue.pop
+          break if batch.length == 0
+
+          batch.each do |data|
+            bad_clients = []
+            @subscribers.each do |client|
+              begin
+                client.write [data.bytesize].pack("l>")
+                client.write data
+              rescue Exception => ex
+                puts ex
+                bad_clients << client
+              end
+            end
+
+            @subscribers.delete_if { |s| bad_clients.include? s }
+          end
+        end
+      end
+
+      subscriber_listener = Thread.new do
+        listener = TCPServer.open(10002)
+
+        loop do
+          client = listener.accept
+          @subscribers << client
         end
       end
     end
@@ -72,7 +108,7 @@ module Anubarak
       total = 0
       buffer = []
       buffer_size = 0
-      max_buffer_size = 1 * 1024 * 1024
+      max_buffer_size = 1 * 32 * 1024
 
       loop do
         raw_headers = client.read(8)
